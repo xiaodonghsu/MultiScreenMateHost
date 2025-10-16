@@ -1,6 +1,8 @@
-# WebSocket 按键服务器
+# MultiScreenMate Host Server
 
-一个基于 Python 的 WebSocket 服务器，用于接收客户端命令并执行系统按键操作。
+**主程序：server.py**
+
+一个基于 Python 的 WebSocket 服务器，用于接收客户端命令并执行系统按键操作，支持多屏幕协同控制。
 
 ## 功能特性
 
@@ -31,10 +33,20 @@ pip install -r requirements.txt
 - `name`: 服务名称（握手时返回）
 - `mac_addr`: MAC地址（握手时返回）
 
+## 主程序说明
+
+本项目的主程序是 `server.py`，负责启动 WebSocket 服务器并处理客户端连接。
+
 ## 启动服务器
 
+运行主程序：
 ```bash
 python server.py
+```
+
+或者使用批处理文件：
+```bash
+start_server.bat
 ```
 
 ## 客户端协议
@@ -97,8 +109,21 @@ python server.py
 }
 ```
 
+## 项目结构
+
+```
+├── server.py          # 主程序 - WebSocket 服务器
+├── test_client.py     # 测试客户端
+├── test_scan_server.py # 服务器扫描工具
+├── generate_cert.py   # SSL证书生成工具
+├── config.json        # 配置文件
+├── requirements.txt   # Python依赖
+└── README.md          # 项目说明
+```
+
 ## 安全说明
 
 - 服务默认监听所有网络接口 (0.0.0.0)
 - 包含安全保护机制，防止意外操作
 - 建议在生产环境中配置防火墙规则
+- 敏感文件（logs、证书文件）已通过.gitignore排除
