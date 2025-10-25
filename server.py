@@ -71,6 +71,8 @@ class WebSocketKeyServer:
                 await self.handle_keypress_command(websocket, content, msg_id)
             elif command == 'set' and content:
                 await self.handle_set_command(websocket, content, msg_id)
+            elif command == 'text' and content:
+                await self.handle_text_command(websocket, content, msg_id)
             else:
                 await self.send_error(websocket, f"未知命令: {command}")
                 
@@ -164,6 +166,24 @@ class WebSocketKeyServer:
         except Exception as e:
             logger.error(f"执行设置命令时发生错误: {e}")
             await self.send_error(websocket, f"设置失败: {str(e)}")
+    
+    async def handle_text_command(self, websocket, text_content: str, msg_id: str):
+        """处理文本命令"""
+        try:
+            # 打印语音内容
+            logger.info(f"收到文本消息 (ID: {msg_id}): {text_content}")
+            
+            # 返回成功响应
+            response = {
+                "id": msg_id,
+                "result": "success"
+            }
+            await websocket.send(json.dumps(response))
+            logger.info(f"文本命令处理成功 (ID: {msg_id})")
+            
+        except Exception as e:
+            logger.error(f"处理文本命令时发生错误: {e}")
+            await self.send_error(websocket, f"文本处理失败: {str(e)}")
     
     def save_config(self):
         """保存配置到config.json文件"""
