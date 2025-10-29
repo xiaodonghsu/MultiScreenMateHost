@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import asyncio
+import base64
 import json
 import logging
 import os
 import ssl
+import tempfile
 import pyautogui
 import websockets
 from typing import Any
@@ -45,6 +47,7 @@ class WebSocketKeyServer:
         
         try:
             async for message in websocket:
+                logger.info(f"收到消息: {message[:100]}...")
                 await self.handle_message(websocket, message, client_ip)
         except websockets.exceptions.ConnectionClosed:
             disconnect_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -73,7 +76,10 @@ class WebSocketKeyServer:
                 await self.handle_set_command(websocket, content, msg_id)
             elif command == 'text' and content:
                 await self.handle_text_command(websocket, content, msg_id)
+            elif command == 'voice' and content:
+                await self.handle_voice_command(websocket, content, msg_id)
             else:
+                logger.info(f"未知命令: {command}")
                 await self.send_error(websocket, f"未知命令: {command}")
                 
         except json.JSONDecodeError:
@@ -88,8 +94,8 @@ class WebSocketKeyServer:
             "id": msg_id,
             "result": "success",
             "name": self.server_name,
-            "tag_id": self.tag_id
-
+            "tag_id": self.tag_id,
+            "asr_enabled": False
         }
         await websocket.send(json.dumps(response))
         logger.info(f"握手成功: {msg_id}")
@@ -167,11 +173,11 @@ class WebSocketKeyServer:
             logger.error(f"执行设置命令时发生错误: {e}")
             await self.send_error(websocket, f"设置失败: {str(e)}")
     
-    async def handle_text_command(self, websocket, text_content: str, msg_id: str):
+    async def handle_text_command(self, websocket, content: str, msg_id: str):
         """处理文本命令"""
         try:
             # 打印语音内容
-            logger.info(f"收到文本消息 (ID: {msg_id}): {text_content}")
+            logger.info(f"收到文本消息 (ID: {msg_id}): {content}")
             
             # 返回成功响应
             response = {
@@ -184,7 +190,155 @@ class WebSocketKeyServer:
         except Exception as e:
             logger.error(f"处理文本命令时发生错误: {e}")
             await self.send_error(websocket, f"文本处理失败: {str(e)}")
-    
+
+    async def handle_voice_command(self, websocket, content: str, msg_id: str):
+        """处理语音命令 - 使用FunASR服务进行语音转文字"""
+        try:
+            # 解码base64语音数据
+            logger.info(f"收到语音消息 (ID: {msg_id}): 数据长度 {len(content)}")
+            
+            # 解码base64
+            try:
+                audio_data = base64.b64decode(content)
+                logger.info(f"Base64解码成功: {len(audio_data)} 字节")
+            except Exception as e:
+                logger.error(f"Base64解码失败: {e}")
+                await self.send_error(websocket, "语音数据格式错误")
+                return
+            
+            # 将语音数据保存为临时文件
+            with tempfile.NamedTemporaryFile(suffix='.amr', delete=False) as temp_file:
+                temp_file.write(audio_data)
+                temp_filename = temp_file.name
+            
+            logger.info(f"语音数据保存成功: {temp_filename}")
+            
+            # 使用FunASR客户端进行语音识别
+            text = await self.call_funasr_service(temp_filename, msg_id)
+            
+            # 清理临时文件
+            try:
+                os.unlink(temp_filename)
+            except Exception as e:
+                logger.info("remove tempfile fail:", e)
+                pass
+            
+            # 返回成功响应，包含转换的文字
+            response = {
+                "id": msg_id,
+                "result": "success",
+                "text": text
+            }
+            await websocket.send(json.dumps(response))
+            logger.info(f"语音命令处理完成 (ID: {msg_id})")
+            
+        except Exception as e:
+            logger.error(f"处理语音命令时发生错误: {e}")
+            await self.send_error(websocket, f"语音处理失败: {str(e)}")
+
+    async def call_funasr_service(self, audio_file_path: str, msg_id: str) -> str:
+        """调用FunASR服务进行语音识别"""
+        try:
+            import asyncio
+            import websockets
+            import json
+            import ssl
+            
+            # FunASR服务配置（参考funasr_wss_client.py）
+            funasr_host = "d16.office.uassist.cn"  # FunASR服务地址
+            funasr_port = 10095        # FunASR服务端口
+            mode = "offline"           # 识别模式
+            
+            # 读取音频文件
+            with open(audio_file_path, "rb") as f:
+                audio_bytes = f.read()
+            
+            # 计算音频参数
+            sample_rate = 16000
+            chunk_size = [5, 10, 5]
+            chunk_interval = 10
+            stride = int(60 * chunk_size[1] / chunk_interval / 1000 * sample_rate * 2)
+            chunk_num = (len(audio_bytes) - 1) // stride + 1
+            
+            # 连接FunASR服务
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            uri = "wss://{}:{}".format(funasr_host, funasr_port)
+            
+            async with websockets.connect(
+                uri, subprotocols=["binary"], ping_interval=None, ssl=ssl_context
+            ) as websocket:
+                
+                # 发送初始化消息
+                init_message = json.dumps({
+                    "mode": mode,
+                    "chunk_size": chunk_size,
+                    "chunk_interval": chunk_interval,
+                    "encoder_chunk_look_back": 4,
+                    "decoder_chunk_look_back": 0,
+                    "audio_fs": sample_rate,
+                    "wav_name": f"voice_{msg_id}",
+                    "wav_format": "wav",
+                    "is_speaking": True,
+                    "hotwords": "",
+                    "itn": True,
+                })
+                
+                await websocket.send(init_message)
+                
+                # 发送音频数据
+                for i in range(chunk_num):
+                    beg = i * stride
+                    data = audio_bytes[beg : beg + stride]
+                    await websocket.send(data)
+                    
+                    if i == chunk_num - 1:
+                        # 发送结束标志
+                        end_message = json.dumps({"is_speaking": False})
+                        await websocket.send(end_message)
+                
+                # 接收识别结果
+                recognized_text = ""
+                max_wait_time = 30  # 最大等待时间30秒
+                start_time = asyncio.get_event_loop().time()
+                
+                while True:
+                    # 检查是否超时
+                    current_time = asyncio.get_event_loop().time()
+                    if current_time - start_time > max_wait_time:
+                        logger.warning(f"FunASR服务响应超时 (ID: {msg_id})")
+                        break
+                    
+                    try:
+                        # 设置接收超时
+                        response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
+                        response_data = json.loads(response)
+                        
+                        if "text" in response_data:
+                            recognized_text = response_data["text"]
+                            logger.info(f"FunASR识别结果 (ID: {msg_id}): {recognized_text}")
+                            
+                        if response_data.get("is_final", False):
+                            logger.info(f"FunASR识别完成 (ID: {msg_id})")
+                            break
+
+                    except asyncio.TimeoutError:
+                        logger.warning(f"等待FunASR响应超时 (ID: {msg_id})")
+                        break
+                    except websockets.exceptions.ConnectionClosed:
+                        logger.warning(f"FunASR连接已关闭 (ID: {msg_id})")
+                        break
+                    except Exception as e:
+                        logger.error(f"接收FunASR响应时发生错误 (ID: {msg_id}): {e}")
+                        break
+                
+                return recognized_text
+                
+        except Exception as e:
+            logger.error(f"调用FunASR服务失败 (ID: {msg_id}): {e}")
+            return f"语音识别服务错误: {str(e)}"
+
     def save_config(self):
         """保存配置到config.json文件"""
         try:
@@ -239,7 +393,12 @@ class WebSocketKeyServer:
             
             if os.path.exists(cert_file) and os.path.exists(key_file):
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                # 设置更安全的选项
+                ssl_context.set_ciphers('ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:ECDH+AESGCM:DH+AESGCM:ECDH+AES:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS')
                 ssl_context.load_cert_chain(cert_file, key_file)
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                logger.info("SSL上下文创建成功，使用WSS连接")
                 return ssl_context
             else:
                 logger.warning("未找到SSL证书文件，使用非安全连接")
@@ -248,6 +407,7 @@ class WebSocketKeyServer:
                 
         except Exception as e:
             logger.error(f"创建SSL上下文失败: {e}")
+            logger.info("将使用非安全连接")
             return None
 
 def load_config():

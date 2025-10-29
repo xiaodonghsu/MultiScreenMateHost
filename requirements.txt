@@ -1,2 +1,4 @@
 websockets>=11.0
 pyautogui>=0.9.54
+speechrecognition>=3.10.0
+pyaudio>=0.2.11

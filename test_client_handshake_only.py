@@ -6,8 +6,9 @@ import websockets
 
 async def test_client():
     """测试客户端"""
+    uri = "wss://d16.office.uassist.cn:56789"
     # uri = "wss://d16.nps.uassist.cn:59132"
-    uri = "wss://0.tcp.jp.ngrok.io:13631"
+    # uri = "wss://0.tcp.jp.ngrok.io:13631"
     
     # 创建SSL上下文，禁用证书验证（仅用于测试）
     ssl_context = ssl.create_default_context()
