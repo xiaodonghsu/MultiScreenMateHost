@@ -49,43 +49,161 @@ python server.py
 start_server.bat
 ```
 
-## 客户端协议
+## 客户端-服务端协议
 
 ### 1. 握手命令
 
 客户端发送：
 ```json
 {
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
   "command": "handshake",
-  "id": "unique_id_123"
 }
 ```
 
 服务端响应：
 ```json
 {
-  "id": "unique_id_123",
+  "msg_id": "unique_message_id",
   "result": "success",
-  "name": "WebSocket Key Server",
-  "mac": "00:1B:44:11:3A:B7"
+  "content": { 
+    "name": "server_name",
+    "tag_id": "tag_id"
+  }
 }
 ```
 
-### 2. 按键命令
+### 2. 设置服务端信息命令
 
 客户端发送：
 ```json
 {
-  "command": {"key": "PageUp"},
-  "id": "unique_id_456"
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
+  "command": "set",
+  "content": {
+    "name": "new_server_name",
+    "tag_id": "new_tag_id"
+  }
 }
 ```
 
 服务端响应：
 ```json
 {
-  "id": "unique_id_456",
-  "result": "success"
+  "msg_id": "unique_message_id",
+  "result": "success"/"error",
+  "content": "错误描述"
+}
+```
+
+### 3. 按键命令
+
+客户端发送：
+```json
+{
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
+  "command": "key",
+  "content": "PageUp"
+}
+```
+
+服务端响应：
+```json
+{
+  "msg_id": "unique_message_id",
+  "result": "success"/"error",
+  "content": "错误描述"
+}
+```
+
+### 4. 鼠标命令
+
+客户端发送：
+```json
+{
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
+  "command": "mouse",
+  "content": {
+    "x": 100,
+    "y": 200, 
+    "button": "left"
+  }
+}
+```
+
+服务端响应：
+```json
+{
+  "msg_id": "unique_message_id",
+  "result": "success"/"error",
+  "content": "错误描述"
+}
+```
+
+### 5. 文本命令
+
+客户端发送：
+```json
+{
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
+  "command": "text",
+  "content": "文本内容"
+}
+```
+
+服务端响应：
+```json
+{
+  "msg_id": "unique_message_id",
+  "result": "success"/"error",
+  "content": "错误描述"
+}
+```
+
+### 6. 语音命令
+
+客户端发送：
+```json
+{
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
+  "command": "voice",
+  "content": "语音的BASE64编码"
+}
+```
+
+服务端响应：
+```json
+{
+  "msg_id": "unique_message_id",
+  "result": "success"/"error",
+  "content": "错误描述"
+}
+```
+
+### 7. 图片命令
+
+客户端发送：
+```json
+{
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
+  "command": "image",
+  "content": "图片的BASE64编码"
+}
+```
+
+服务端响应：
+```json
+{
+  "msg_id": "unique_message_id",
+  "result": "success"/"error",
+  "content": "错误描述"
 }
 ```
 
@@ -104,8 +222,9 @@ start_server.bat
 服务端错误响应格式：
 ```json
 {
+  "msg_id": "unique_message_id",
   "result": "error",
-  "message": "错误描述"
+  "content": "错误描述"
 }
 ```
 

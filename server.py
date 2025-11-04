@@ -7,6 +7,7 @@ import os
 import ssl
 import tempfile
 import pyautogui
+import pyperclip
 import websockets
 from typing import Any
 from datetime import datetime
@@ -55,14 +56,15 @@ class WebSocketKeyServer:
         except Exception as e:
             disconnect_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.error(f"客户端连接异常 - IP: {client_ip}, 连接时间: {connection_time}, 断开时间: {disconnect_time}, 错误: {e}")
-    
+
     async def handle_message(self, websocket, message: str, client_ip: str):
         """处理客户端消息"""
         try:
             data = json.loads(message)
             command = data.get('command')
             content = data.get('content')
-            msg_id = data.get('id')
+            msg_id = data.get('msg_id')
+            client_id = data.get('client_id')
             
             if not msg_id:
                 await self.send_error(websocket, "消息ID不能为空")
@@ -70,8 +72,8 @@ class WebSocketKeyServer:
                 
             if command == 'handshake':
                 await self.handle_handshake(websocket, msg_id)
-            elif command == 'keypress' and content:
-                await self.handle_keypress_command(websocket, content, msg_id)
+            elif command == 'key' and content:
+                await self.handle_key_command(websocket, content, msg_id)
             elif command == 'set' and content:
                 await self.handle_set_command(websocket, content, msg_id)
             elif command == 'text' and content:
@@ -91,17 +93,17 @@ class WebSocketKeyServer:
     async def handle_handshake(self, websocket, msg_id: str):
         """处理握手命令"""
         response = {
-            "id": msg_id,
+            "msg_id": msg_id,
             "result": "success",
-            "name": self.server_name,
-            "tag_id": self.tag_id,
-            "asr_enabled": False
+            "content": {
+                "name": self.server_name,
+                "tag_id": self.tag_id
+            }
         }
         await websocket.send(json.dumps(response))
-        logger.info(f"握手成功: {msg_id}")
         logger.info(json.dumps(response))
     
-    async def handle_keypress_command(self, websocket, key: str, msg_id: str):
+    async def handle_key_command(self, websocket, key: str, msg_id: str):
         """处理按键命令"""
         try:
             # 验证按键是否支持
@@ -118,7 +120,7 @@ class WebSocketKeyServer:
                 "result": "success"
             }
             await websocket.send(json.dumps(response))
-            logger.info(f"按键执行成功: {key} (ID: {msg_id})")
+            logger.info(json.dumps(response))
             
         except pyautogui.FailSafeException:
             await self.send_error(websocket, "安全保护触发，无法执行按键")
@@ -167,7 +169,7 @@ class WebSocketKeyServer:
                 "updated": updated
             }
             await websocket.send(json.dumps(response))
-            logger.info(f"设置命令执行成功 (ID: {msg_id})")
+            logger.info(json.dumps(response))
             
         except Exception as e:
             logger.error(f"执行设置命令时发生错误: {e}")
@@ -185,7 +187,7 @@ class WebSocketKeyServer:
                 "result": "success"
             }
             await websocket.send(json.dumps(response))
-            logger.info(f"文本命令处理成功 (ID: {msg_id})")
+            logger.info(json.dumps(response))
             
         except Exception as e:
             logger.error(f"处理文本命令时发生错误: {e}")
@@ -207,7 +209,7 @@ class WebSocketKeyServer:
                 return
             
             # 将语音数据保存为临时文件
-            with tempfile.NamedTemporaryFile(suffix='.amr', delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
                 temp_file.write(audio_data)
                 temp_filename = temp_file.name
             
@@ -223,6 +225,10 @@ class WebSocketKeyServer:
                 logger.info("remove tempfile fail:", e)
                 pass
             
+            # 指定的位置输入文本
+            pyperclip.copy(text)
+            pyautogui.hotkey('ctrl', 'v')
+
             # 返回成功响应，包含转换的文字
             response = {
                 "id": msg_id,
@@ -230,7 +236,7 @@ class WebSocketKeyServer:
                 "text": text
             }
             await websocket.send(json.dumps(response))
-            logger.info(f"语音命令处理完成 (ID: {msg_id})")
+            logger.info(json.dumps(response))
             
         except Exception as e:
             logger.error(f"处理语音命令时发生错误: {e}")
@@ -245,9 +251,9 @@ class WebSocketKeyServer:
             import ssl
             
             # FunASR服务配置（参考funasr_wss_client.py）
-            funasr_host = "d16.office.uassist.cn"  # FunASR服务地址
+            funasr_host = "nuc10.i.uassist.cn"  # FunASR服务地址
             funasr_port = 10095        # FunASR服务端口
-            mode = "offline"           # 识别模式
+            mode = "2pass-online"      #2pass #offline      # 识别模式
             
             # 读取音频文件
             with open(audio_file_path, "rb") as f:
@@ -279,7 +285,7 @@ class WebSocketKeyServer:
                     "decoder_chunk_look_back": 0,
                     "audio_fs": sample_rate,
                     "wav_name": f"voice_{msg_id}",
-                    "wav_format": "wav",
+                    "wav_format": "pcm",
                     "is_speaking": True,
                     "hotwords": "",
                     "itn": True,
@@ -314,13 +320,14 @@ class WebSocketKeyServer:
                         # 设置接收超时
                         response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
                         response_data = json.loads(response)
-                        
-                        if "text" in response_data:
-                            recognized_text = response_data["text"]
-                            logger.info(f"FunASR识别结果 (ID: {msg_id}): {recognized_text}")
-                            
+                        logger.info(f"FunASR识别响应: {response}")
+
                         if response_data.get("is_final", False):
-                            logger.info(f"FunASR识别完成 (ID: {msg_id})")
+                            recognized_text = response_data.get("text", "")
+                            logger.info(f"FunASR识别分段 (ID: {msg_id}): {recognized_text}")
+                        else:
+                            recognized_text = response_data.get("text", "")
+                            logger.info(f"FunASR识别分段结果 (ID: {msg_id}): {recognized_text}")
                             break
 
                     except asyncio.TimeoutError:
