@@ -37,8 +37,9 @@ class WebSocketKeyServer:
     def __init__(self, config: dict[str, Any]):
         self.config = config
         self.port = config.get('port', 56789)
-        self.server_name = config.get('name', 'WebSocket Key Server')
+        self.host_name = config.get('host_name', 'WebSocketServer')
         self.tag_id = config.get('tag_id', '')
+        self.funasr_host = config.get('funasr_host', '')
         
     async def handle_connection(self, websocket):
         """处理客户端连接"""
@@ -96,7 +97,7 @@ class WebSocketKeyServer:
             "msg_id": msg_id,
             "result": "success",
             "content": {
-                "name": self.server_name,
+                "name": self.host_name,
                 "tag_id": self.tag_id
             }
         }
@@ -137,7 +138,7 @@ class WebSocketKeyServer:
                 return
                 
             # 获取要修改的字段
-            new_name = content.get('name')
+            new_name = content.get('host_name')
             new_tag_id = content.get('tag_id')
             
             # 检查是否有有效的修改
@@ -147,9 +148,9 @@ class WebSocketKeyServer:
             
             # 更新配置
             updated = False
-            if new_name is not None and new_name != self.server_name:
-                self.server_name = new_name
-                self.config['name'] = new_name
+            if new_name is not None and new_name != self.host_name:
+                self.host_name = new_name
+                self.config['host_name'] = new_name
                 updated = True
                 logger.info(f"更新服务器名称: {new_name}")
                 
@@ -214,7 +215,12 @@ class WebSocketKeyServer:
                 temp_filename = temp_file.name
             
             logger.info(f"语音数据保存成功: {temp_filename}")
-            
+
+            if self.funasr_host == "":
+                logger.error("FunASR服务未配置")
+                await self.send_error(websocket, "FunASR服务未配置")
+                return
+
             # 使用FunASR客户端进行语音识别
             text = await self.call_funasr_service(temp_filename, msg_id)
             
@@ -226,8 +232,9 @@ class WebSocketKeyServer:
                 pass
             
             # 指定的位置输入文本
-            pyperclip.copy(text)
-            pyautogui.hotkey('ctrl', 'v')
+            if len(text) > 0:
+                pyperclip.copy(text)
+                pyautogui.hotkey('ctrl', 'v')
 
             # 返回成功响应，包含转换的文字
             response = {
@@ -270,7 +277,8 @@ class WebSocketKeyServer:
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
-            uri = "wss://{}:{}".format(funasr_host, funasr_port)
+            # uri = "wss://{}:{}".format(funasr_host, funasr_port)
+            uri = self.funasr_host
             
             async with websockets.connect(
                 uri, subprotocols=["binary"], ping_interval=None, ssl=ssl_context
@@ -305,10 +313,9 @@ class WebSocketKeyServer:
                         await websocket.send(end_message)
                 
                 # 接收识别结果
-                recognized_text = ""
-                max_wait_time = 30  # 最大等待时间30秒
+                max_wait_time = 10  # 最大等待时间10秒
                 start_time = asyncio.get_event_loop().time()
-                
+                asr_text = []
                 while True:
                     # 检查是否超时
                     current_time = asyncio.get_event_loop().time()
@@ -320,15 +327,18 @@ class WebSocketKeyServer:
                         # 设置接收超时
                         response = await asyncio.wait_for(websocket.recv(), timeout=5.0)
                         response_data = json.loads(response)
-                        logger.info(f"FunASR识别响应: {response}")
+                        logger.info(f"FunASR识别响应: {response_data}")
 
-                        if response_data.get("is_final", False):
-                            recognized_text = response_data.get("text", "")
-                            logger.info(f"FunASR识别分段 (ID: {msg_id}): {recognized_text}")
-                        else:
-                            recognized_text = response_data.get("text", "")
-                            logger.info(f"FunASR识别分段结果 (ID: {msg_id}): {recognized_text}")
+                        if "stamp_sents" in response_data:
+                            asr_text.append(response_data.get("text", ""))
+
+                        recognized_text = response_data.get("text", "")
+                        # 判断结束标记
+                        if response_data.get("is_final", False) == True:
+                            logger.info(f"FunASR识别结果 (ID: {msg_id}): {recognized_text}")
                             break
+                        else:
+                            logger.info(f"FunASR识别分段 (ID: {msg_id}): {recognized_text}")
 
                     except asyncio.TimeoutError:
                         logger.warning(f"等待FunASR响应超时 (ID: {msg_id})")
@@ -340,7 +350,7 @@ class WebSocketKeyServer:
                         logger.error(f"接收FunASR响应时发生错误 (ID: {msg_id}): {e}")
                         break
                 
-                return recognized_text
+                return "".join(asr_text)
                 
         except Exception as e:
             logger.error(f"调用FunASR服务失败 (ID: {msg_id}): {e}")
@@ -385,7 +395,7 @@ class WebSocketKeyServer:
             )
             logger.info(f"WS服务器启动成功，监听端口: {self.port}")
             
-        logger.info(f"服务名称: {self.server_name}")
+        logger.info(f"主机名称: {self.host_name}")
         logger.info(f"tag_id: {self.tag_id}")
 
         # 保持服务器运行
