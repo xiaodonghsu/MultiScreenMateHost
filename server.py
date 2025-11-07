@@ -49,7 +49,7 @@ class WebSocketKeyServer:
         
         try:
             async for message in websocket:
-                logger.info(f"收到消息: {message[:100]}...")
+                logger.info(f"收到消息: {message[:150]}...")
                 await self.handle_message(websocket, message, client_ip)
         except websockets.exceptions.ConnectionClosed:
             disconnect_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -138,7 +138,7 @@ class WebSocketKeyServer:
                 return
                 
             # 获取要修改的字段
-            new_name = content.get('host_name')
+            new_name = content.get('name')
             new_tag_id = content.get('tag_id')
             
             # 检查是否有有效的修改
