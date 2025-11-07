@@ -1,0 +1,18 @@
+{
+  "port": {
+    "value": 56789,
+    "alias": "WebSocket服务端口"
+  },
+  "host_name": {
+    "value": "D16",
+    "alias": "主机名"
+  },
+  "tag_id": {
+    "value": "118EDC4A0E201DE0",
+    "alias": "标签ID"
+  },
+  "funasr_host":{
+    "value": "wss://nuc10.i.uassist.cn:10096",
+    "alias": "FUNASR服务地址"
+  }
+}

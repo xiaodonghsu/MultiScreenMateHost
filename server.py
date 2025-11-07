@@ -34,13 +34,13 @@ logger = logging.getLogger(__name__)
 logger.info(f"日志文件已创建: {log_filepath}")
 
 class WebSocketKeyServer:
-    def __init__(self, config: dict[str, Any]):
-        self.config = config
-        self.port = config.get('port', 56789)
-        self.host_name = config.get('host_name', 'WebSocketServer')
-        self.tag_id = config.get('tag_id', '')
-        self.funasr_host = config.get('funasr_host', '')
-        
+    def __init__(self):
+        self.config = self.load_config()
+        self.port = self.config.get('port', 56789)
+        self.host_name = self.config.get('host_name', 'WebSocketServer')
+        self.tag_id = self.config.get('tag_id', '')
+        self.funasr_host = self.config.get('funasr_host', '')
+
     async def handle_connection(self, websocket):
         """处理客户端连接"""
         client_ip = websocket.remote_address[0]
@@ -96,10 +96,7 @@ class WebSocketKeyServer:
         response = {
             "msg_id": msg_id,
             "result": "success",
-            "content": {
-                "name": self.host_name,
-                "tag_id": self.tag_id
-            }
+            "content": self.config
         }
         await websocket.send(json.dumps(response))
         logger.info(json.dumps(response))
@@ -138,7 +135,7 @@ class WebSocketKeyServer:
                 return
                 
             # 获取要修改的字段
-            new_name = content.get('name')
+            new_name = content.get('host_name')
             new_tag_id = content.get('tag_id')
             
             # 检查是否有有效的修改
@@ -356,6 +353,18 @@ class WebSocketKeyServer:
             logger.error(f"调用FunASR服务失败 (ID: {msg_id}): {e}")
             return f"语音识别服务错误: {str(e)}"
 
+    def load_config(self):
+        """加载配置文件"""
+        try:
+            with open('config.json', 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logger.error("配置文件 config.json 未找到")
+            raise
+        except json.JSONDecodeError as e:
+            logger.error(f"配置文件格式错误: {e}")
+            raise
+
     def save_config(self):
         """保存配置到config.json文件"""
         try:
@@ -427,23 +436,12 @@ class WebSocketKeyServer:
             logger.info("将使用非安全连接")
             return None
 
-def load_config():
-    """加载配置文件"""
-    try:
-        with open('config.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        logger.error("配置文件 config.json 未找到")
-        raise
-    except json.JSONDecodeError as e:
-        logger.error(f"配置文件格式错误: {e}")
-        raise
+
 
 async def main():
     """主函数"""
     try:
-        config = load_config()
-        server = WebSocketKeyServer(config)
+        server = WebSocketKeyServer()
         await server.start_server()
     except KeyboardInterrupt:
         logger.info("服务器被用户中断")
