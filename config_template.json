@@ -1,5 +1,5 @@
 {
-  "port": 56789,
+  "host_port": 56789,
   "host_name": "NUC10",
   "tag_id": "04379859C32A81",
   "funasr_host": "wss://nuc10.i.uassist.cn:10096"
