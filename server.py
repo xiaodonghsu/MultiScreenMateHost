@@ -36,7 +36,7 @@ logger.info(f"日志文件已创建: {log_filepath}")
 class WebSocketKeyServer:
     def __init__(self):
         self.config = self.load_config()
-        self.port = self.config.get('port', 56789)
+        self.port = self.config.get('host_port', 56789)
         self.host_name = self.config.get('host_name', 'WebSocketServer')
         self.tag_id = self.config.get('tag_id', '')
         self.funasr_host = self.config.get('funasr_host', '')
