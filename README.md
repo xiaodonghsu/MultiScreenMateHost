@@ -50,7 +50,7 @@ python server.py
 {
   "client_id": "unique_client_id",
   "msg_id": "unique_message_id",
-  "command": "handshake",
+  "command": "handshake"
 }
 ```
 
@@ -61,7 +61,12 @@ python server.py
   "result": "success",
   "content": { 
     "name": "server_name",
-    "tag_id": "tag_id"
+    "tag_id": "tag_id",
+    "functions": [
+        {"name": "人工", "function": "switchToManualMode"},
+        {"name": "协同", "function": "switchToCollabrateMode"},
+        {"name": "自动", "function": "switchToAutoMode"}
+      ]
   }
 }
 ```
@@ -187,6 +192,27 @@ python server.py
   "msg_id": "unique_message_id",
   "command": "image",
   "content": "图片的BASE64编码"
+}
+```
+
+服务端响应：
+```json
+{
+  "msg_id": "unique_message_id",
+  "result": "success"/"error",
+  "content": "错误描述"
+}
+```
+
+### 8. 图片命令
+
+客户端发送：
+```json
+{
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
+  "command": "function",
+  "content": "function content"
 }
 ```
 
