@@ -50,7 +50,7 @@ python server.py
 {
   "client_id": "unique_client_id",
   "msg_id": "unique_message_id",
-  "command": "handshake",
+  "command": "handshake"
 }
 ```
 
