@@ -61,7 +61,12 @@ python server.py
   "result": "success",
   "content": { 
     "name": "server_name",
-    "tag_id": "tag_id"
+    "tag_id": "tag_id",
+    "functions": [
+        {"name": "人工", "function": "switchToManualMode"},
+        {"name": "协同", "function": "switchToCollabrateMode"},
+        {"name": "自动", "function": "switchToAutoMode"}
+      ]
   }
 }
 ```
