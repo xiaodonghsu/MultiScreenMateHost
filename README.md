@@ -204,6 +204,27 @@ python server.py
 }
 ```
 
+### 8. 图片命令
+
+客户端发送：
+```json
+{
+  "client_id": "unique_client_id",
+  "msg_id": "unique_message_id",
+  "command": "function",
+  "content": "function content"
+}
+```
+
+服务端响应：
+```json
+{
+  "msg_id": "unique_message_id",
+  "result": "success"/"error",
+  "content": "错误描述"
+}
+```
+
 ### 支持的按键
 
 支持所有 `pyautogui` 支持的按键，例如：
