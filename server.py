@@ -81,6 +81,10 @@ class WebSocketKeyServer:
                 await self.handle_text_command(websocket, content, msg_id)
             elif command == 'voice' and content:
                 await self.handle_voice_command(websocket, content, msg_id)
+            elif command == 'image' and content:
+                await self.handle_image_command(websocket, content, msg_id)
+            elif command == 'function' and content:
+                await self.handle_function_command(websocket, content, msg_id)
             else:
                 logger.info(f"未知命令: {command}")
                 await self.send_error(websocket, f"未知命令: {command}")
@@ -352,6 +356,11 @@ class WebSocketKeyServer:
         except Exception as e:
             logger.error(f"调用FunASR服务失败 (ID: {msg_id}): {e}")
             return f"语音识别服务错误: {str(e)}"
+    async def handle_image_command(self, websocket, content: str, msg_id: str):
+        logger.info(f"收到图片消息 (ID: {msg_id}): 数据长度 {len(content)}")
+
+    async def handle_function_command(self, websocket, content: str, msg_id: str):
+        logger
 
     def load_config(self):
         """加载配置文件"""
