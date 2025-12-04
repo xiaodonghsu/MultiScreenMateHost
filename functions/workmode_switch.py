@@ -2,7 +2,10 @@ import json
 import os
 
 class WorkModeSwitch():
-    def __init__(self, config_file: str = r"D:\Files\Documents\Project\yancheng_playground\slide_avatar_v5\monitor_service\config.json"):
+    def __init__(self, config_file: str = r"..\slide_avatar_cooperate\monitor_service\config.json"):
+        if not os.path.exists(config_file):
+            print("当前路径:", os.getcwd(), "不存在的文件:", config_file)
+            raise FileNotFoundError(f"Config file not found: {config_file}")
         self.config_file = config_file
         if not os.path.exists(config_file):
             raise FileNotFoundError(f"Config file not found: {config_file}")
