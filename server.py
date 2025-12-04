@@ -9,6 +9,7 @@ import tempfile
 import pyautogui
 import pyperclip
 import websockets
+import ctypes
 from typing import Any
 from datetime import datetime
 
@@ -115,6 +116,12 @@ class WebSocketKeyServer:
                 return
                 
             # 模拟按键操作
+            # 为避免部分101键盘的小键盘num lock键影响上下左右的输出
+            # 先检查 num lock 键的状态,如果开启则关闭
+            if key in ['Up', 'Down', 'Left', 'Right']:
+                if bool(ctypes.windll.user32.GetKeyState(0x90) & 1):
+                    pyautogui.press('numlock')
+
             pyautogui.press(key)
             
             response = {
@@ -360,7 +367,29 @@ class WebSocketKeyServer:
         logger.info(f"收到图片消息 (ID: {msg_id}): 数据长度 {len(content)}")
 
     async def handle_function_command(self, websocket, content: str, msg_id: str):
-        logger
+        logger.info(f"收到功能命令 (ID: {msg_id}): {content}")
+        try:
+            import functions
+            func = getattr(functions, content)
+            logger.info(f"run function: {func}()")
+            run_result = func()
+            logger.info(run_result)
+            response = {
+                "id": msg_id,
+                "result": "success",
+                "text": f"{run_result}"
+            }
+            await websocket.send(json.dumps(response))
+        except Exception as e:
+            logger.info(f"error in run function: {content}:", e)
+            response = {
+                "id": msg_id,
+                "result": "error",
+                "text": f"{e}"
+            }
+            await websocket.send(json.dumps(response))
+
+            
 
     def load_config(self):
         """加载配置文件"""
