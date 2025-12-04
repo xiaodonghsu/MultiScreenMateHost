@@ -6,15 +6,20 @@
   "functions": [
     {
       "name": "人工",
-      "function": "switchToManualMode"
+      "function": "switchWorkModeToManual"
     },
     {
       "name": "协同",
-      "function": "switchToCollabrateMode"
+      "function": "switchWorkModeToCollaboration"
     },
     {
       "name": "自动",
-      "function": "switchToAutoMode"
+      "function": "switchWorkModeToAuto"
+    }
+    ,
+    {
+      "name": "数字人",
+      "function": "switchAvatarStatus"
     }
   ]
 }
