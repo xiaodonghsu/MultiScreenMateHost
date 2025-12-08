@@ -487,8 +487,14 @@ async def main():
         logger.error(f"服务器启动失败: {e}")
 
 if __name__ == "__main__":
+    import tendo.singleton
+    try:
+        single = tendo.singleton.SingleInstance()
+    except:
+        logger.error("Another instance of the program is already running.")
+        exit(1)
     # 设置pyautogui安全设置
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE = 0.1
-    
+
     asyncio.run(main())
