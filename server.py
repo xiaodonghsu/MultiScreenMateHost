@@ -12,6 +12,7 @@ import websockets
 import ctypes
 from typing import Any
 from datetime import datetime
+from functions.avatar_switch import sendAvatarText
 
 # 创建logs目录
 logs_dir = "logs"
@@ -231,7 +232,10 @@ class WebSocketKeyServer:
 
             # 使用FunASR客户端进行语音识别
             text = await self.call_funasr_service(temp_filename, msg_id)
-            
+
+            logger.info("向数字人发送文本消息: %s", text)
+            logger.info(sendAvatarText(text))
+           
             # 清理临时文件
             try:
                 os.unlink(temp_filename)
@@ -240,9 +244,9 @@ class WebSocketKeyServer:
                 pass
             
             # 指定的位置输入文本
-            if len(text) > 0:
-                pyperclip.copy(text)
-                pyautogui.hotkey('ctrl', 'v')
+            # if len(text) > 0:
+            #     pyperclip.copy(text)
+            #     pyautogui.hotkey('ctrl', 'v')
 
             # 返回成功响应，包含转换的文字
             response = {
@@ -407,7 +411,7 @@ class WebSocketKeyServer:
         """保存配置到config.json文件"""
         try:
             with open('config.json', 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, ensure_ascii=False, indent=2)
+                json.dump(self.config, f, ensure_ascii=False, indent=4)
             logger.info("配置已保存到config.json")
         except Exception as e:
             logger.error(f"保存配置失败: {e}")

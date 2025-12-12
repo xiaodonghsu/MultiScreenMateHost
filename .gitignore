@@ -1,7 +1,7 @@
 # Logs
 logs/
 *.log
-
+/.codebuddy
 # SSL certificates
 server.crt
 server.key
