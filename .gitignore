@@ -17,6 +17,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+dist/
+build/
 
 # IDE
 .vscode/

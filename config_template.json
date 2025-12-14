@@ -1,8 +1,8 @@
 {
   "host_port": 56789,
-  "host_name": "NUC10",
+  "host_name": "MyName",
   "tag_id": "04379859C32A81",
-  "funasr_host": "wss://nuc10.i.uassist.cn:10096",
+  "funasr_host": "wss://funasr.office.uassist.cn:40005",
   "functions": [
     {
       "name": "人工",
@@ -15,11 +15,14 @@
     {
       "name": "自动",
       "function": "switchWorkModeToAuto"
-    }
-    ,
+    },
     {
       "name": "数字人",
       "function": "switchAvatarStatus"
+    },
+    {
+      "name": "场景",
+      "function": "switchScene"
     }
   ]
 }

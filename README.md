@@ -262,3 +262,12 @@ python server.py
 - 包含安全保护机制，防止意外操作
 - 建议在生产环境中配置防火墙规则
 - 敏感文件（logs、证书文件）已通过.gitignore排除
+
+
+## 编译成exe文件
+pyinstaller .\server.spec --workpath $env:TEMP --distpath "..\dist" --clean
+
+copy server.crt ..\dist\server\server.crt
+copy server.key ..\dist\server\server.key
+copy config.json ..\dist\server\config.json
+copy config_template.json ..\dist\server\config_template.json
