@@ -72,7 +72,7 @@ class WebSocketKeyServer:
             if not msg_id:
                 await self.send_error(websocket, "消息ID不能为空")
                 return
-                
+
             if command == 'handshake':
                 await self.handle_handshake(websocket, msg_id)
             elif command == 'key' and content:
@@ -270,8 +270,6 @@ class WebSocketKeyServer:
             import ssl
             
             # FunASR服务配置（参考funasr_wss_client.py）
-            funasr_host = "nuc10.i.uassist.cn"  # FunASR服务地址
-            funasr_port = 10095        # FunASR服务端口
             mode = "2pass-online"      #2pass #offline      # 识别模式
             
             # 读取音频文件

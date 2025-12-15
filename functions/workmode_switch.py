@@ -3,16 +3,14 @@ import os
 
 class WorkModeSwitch():
     def __init__(self, config_file: str = None):
+        self.__CONFIG_FILE = "slide_monitor_running_config.json"
         if config_file is None:
-            current_dir = os.path.split(os.path.abspath(__file__))[0]
-            with open(os.path.join(current_dir, "monitor_config_path.txt"), 'r') as f:
-                config_file = f.read().strip()
+            temp_path = os.getenv('TEMP')
+            config_file = os.path.join(temp_path, self.__CONFIG_FILE)
         if not os.path.exists(config_file):
             print("当前路径:", os.getcwd(), "不存在的文件:", config_file)
             raise FileNotFoundError(f"Config file not found: {config_file}")
         self.config_file = config_file
-        if not os.path.exists(config_file):
-            raise FileNotFoundError(f"Config file not found: {config_file}")
         self.work_modes = ["collaboration", "auto", "manual"]
         self.__config_work_mode_name__ = "work_mode"
         self.__config_work_mode_response_name__ = "work_mode_response"
