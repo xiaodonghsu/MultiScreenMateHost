@@ -2,7 +2,10 @@
   "host_port": 56789,
   "host_name": "MyName",
   "tag_id": "04379859C32A81",
-  "funasr_host": "wss://funasr.office.uassist.cn:40005",
+  "voice_function": {
+    "enable": true,
+    "function": ["asr", "tts"]
+  },
   "functions": [
     {
       "name": "人工",

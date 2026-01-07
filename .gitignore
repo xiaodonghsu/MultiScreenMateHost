@@ -19,6 +19,8 @@ env.bak/
 venv.bak/
 dist/
 build/
+.venv/
+.python-version
 
 # IDE
 .vscode/
